@@ -1,0 +1,403 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/**
+ * =======================
+ * ENUMS
+ * =======================
+ */
+
+enum ActivityAction {
+  CREATED_TASK
+  UPDATED_TASK
+  CREATED_SUBTASK
+  UPDATED_SUBTASK
+  COMPLETED_TASK
+  CREATED_PROJECT
+  UPDATED_PROJECT
+  COMPLETED_PROJECT
+  CREATED_WORKSPACE
+  UPDATED_WORKSPACE
+  ADDED_COMMENT
+  ADDED_MEMBER
+  REMOVED_MEMBER
+  JOINED_WORKSPACE
+  TRANSFERRED_WORKSPACE_OWNERSHIP
+  ADDED_ATTACHMENT
+}
+
+enum ResourceType {
+  TASK
+  PROJECT
+  WORKSPACE
+  COMMENT
+  USER
+}
+
+enum ProjectStatus {
+  PLANNING
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+model User {
+  id              String    @id @default(ulid())
+  email           String    @unique
+  password        String
+  name            String
+  profilePicture  String?
+  isEmailVerified Boolean   @default(false)
+  lastLogin       DateTime?
+  is2FAEnabled    Boolean   @default(false)
+  twoFAOtp        String?
+  twoFAOtpExpires DateTime?
+
+  /**
+   * ======================
+   * RELATIONS
+   * ======================
+   */
+
+  // Workspace
+  ownedWorkspaces  Workspace[]       @relation("WorkspaceOwner")
+  workspaceMembers WorkspaceMember[]
+  workspaceInvites WorkspaceInvite[]
+
+  // Project
+  projectsCreated Project[]       @relation("ProjectCreator")
+  projectMembers  ProjectMember[]
+
+  // Task
+  tasksCreated  Task[]         @relation("TaskCreator")
+  taskAssignees TaskAssignee[]
+  taskWatchers  TaskWatcher[]
+
+  // Comment
+  comments         Comment[]
+  commentMentions  CommentMention[]
+  commentReactions CommentReaction[]
+
+  // Attachment
+  uploadedFiles Attachment[]
+
+  // Activity / Auth
+  activityLogs  ActivityLog[]
+  verifications Verification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * =======================
+ * WORKSPACE
+ * =======================
+ */
+
+model Workspace {
+  id          String  @id @default(ulid())
+  name        String
+  description String?
+  color       String  @default("#FF5733")
+
+  ownerId String
+  owner   User   @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+
+  members  WorkspaceMember[]
+  projects Project[]
+  invites  WorkspaceInvite[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WorkspaceMember {
+  id          String        @id @default(ulid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole @default(MEMBER)
+  joinedAt    DateTime      @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@unique([workspaceId, userId])
+}
+
+/**
+ * =======================
+ * PROJECT
+ * =======================
+ */
+
+model Project {
+  id          String        @id @default(ulid())
+  title       String
+  description String?
+  status      ProjectStatus @default(PLANNING)
+  startDate   DateTime?
+  dueDate     DateTime?
+  progress    Int           @default(0)
+  isArchived  Boolean       @default(false)
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  createdById String
+  createdBy   User   @relation("ProjectCreator", fields: [createdById], references: [id])
+
+  tasks   Task[]
+  members ProjectMember[]
+  tags    ProjectTag[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProjectMember {
+  id        String @id @default(ulid())
+  projectId String
+  userId    String
+  role      String @default("contributor")
+
+  project Project @relation(fields: [projectId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, userId])
+}
+
+model ProjectTag {
+  id        String @id @default(ulid())
+  projectId String
+  name      String
+
+  project Project @relation(fields: [projectId], references: [id])
+}
+
+/**
+ * =======================
+ * TASK
+ * =======================
+ */
+
+model Task {
+  id             String     @id @default(ulid())
+  title          String
+  description    String?
+  status         TaskStatus @default(TODO)
+  priority       Priority   @default(MEDIUM)
+  dueDate        DateTime?
+  completedAt    DateTime?
+  estimatedHours Float?
+  actualHours    Float?
+  isArchived     Boolean    @default(false)
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id])
+
+  createdById String
+  createdBy   User   @relation("TaskCreator", fields: [createdById], references: [id])
+
+  assignees   TaskAssignee[]
+  watchers    TaskWatcher[]
+  subtasks    SubTask[]
+  comments    Comment[]
+  attachments Attachment[]
+  tags        TaskTag[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SubTask {
+  id        String  @id @default(ulid())
+  taskId    String
+  title     String
+  completed Boolean @default(false)
+
+  task      Task     @relation(fields: [taskId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model TaskAssignee {
+  taskId String
+  userId String
+
+  task Task @relation(fields: [taskId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@id([taskId, userId])
+}
+
+model TaskWatcher {
+  taskId String
+  userId String
+
+  task Task @relation(fields: [taskId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@id([taskId, userId])
+}
+
+model TaskTag {
+  id     String @id @default(ulid())
+  taskId String
+  name   String
+
+  task Task @relation(fields: [taskId], references: [id])
+}
+
+/**
+ * =======================
+ * COMMENT
+ * =======================
+ */
+
+model Comment {
+  id       String  @id @default(ulid())
+  text     String
+  taskId   String
+  authorId String
+  isEdited Boolean @default(false)
+
+  task   Task @relation(fields: [taskId], references: [id])
+  author User @relation(fields: [authorId], references: [id])
+
+  mentions    CommentMention[]
+  reactions   CommentReaction[]
+  attachments Attachment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CommentMention {
+  id        String @id @default(ulid())
+  commentId String
+  userId    String
+  offset    Int
+  length    Int
+
+  comment Comment @relation(fields: [commentId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+}
+
+model CommentReaction {
+  id        String @id @default(ulid())
+  commentId String
+  userId    String
+  emoji     String
+
+  comment Comment @relation(fields: [commentId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([commentId, userId, emoji])
+}
+
+/**
+ * =======================
+ * ATTACHMENT
+ * =======================
+ */
+
+model Attachment {
+  id         String  @id @default(ulid())
+  fileName   String
+  fileUrl    String
+  fileType   String?
+  fileSize   Int?
+  uploadedBy String?
+  taskId     String?
+  commentId  String?
+
+  uploader User?    @relation(fields: [uploadedBy], references: [id])
+  task     Task?    @relation(fields: [taskId], references: [id])
+  comment  Comment? @relation(fields: [commentId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+/**
+ * =======================
+ * ACTIVITY LOG
+ * =======================
+ */
+
+model ActivityLog {
+  id           String         @id @default(ulid())
+  userId       String
+  action       ActivityAction
+  resourceType ResourceType
+  resourceId   String
+  details      Json?
+
+  user User @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+/**
+ * =======================
+ * VERIFICATION
+ * =======================
+ */
+
+model Verification {
+  id        String   @id @default(ulid())
+  userId    String
+  token     String
+  expiresAt DateTime
+
+  user User @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+/**
+ * =======================
+ * WORKSPACE INVITE
+ * =======================
+ */
+
+model WorkspaceInvite {
+  id          String        @id @default(ulid())
+  userId      String
+  workspaceId String
+  token       String
+  role        WorkspaceRole @default(MEMBER)
+  expiresAt   DateTime
+
+  user      User      @relation(fields: [userId], references: [id])
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+
+  createdAt DateTime @default(now())
+}
