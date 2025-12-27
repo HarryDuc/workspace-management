@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import ReactQueryProvider from "@/src/provider/react-query-provider";
+import RootLayout from "@/src/layout/RootLayout";
+import ReactQueryProvider from "@/src/provider/ReactQueryProvider";
 
 export const metadata: Metadata = {
   title: "Workspace Management",
   description: "Manage your projects efficiently",
 };
 
-export default function RootLayout({
+export default function RootLayoutApp({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -16,7 +17,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`antialiased`}>
         <ReactQueryProvider>
-          {children}
+          <RootLayout>{children}</RootLayout>
         </ReactQueryProvider>
       </body>
     </html>

@@ -2,7 +2,7 @@
 
 import type { User } from "@/src/types";
 import { createContext, useContext, useEffect, useState } from "react";
-import { queryClient } from "./react-query-provider";
+import { queryClient } from "./ReactQueryProvider";
 import { usePathname, useRouter } from "next/navigation";
 import { publicRoutes } from "@/src/lib";
 
@@ -23,7 +23,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const navigate = useRouter();
   const currentPath = usePathname();
-  const isPublicRoute = publicRoutes.includes(currentPath);
 
   // check if user is authenticated
   useEffect(() => {
@@ -31,6 +30,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsLoading(true);
       try {
         const storedUser = localStorage.getItem("user");
+        const isPublicRoute = publicRoutes.includes(currentPath);
 
         if (storedUser) {
           setUser(JSON.parse(storedUser));
@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     checkAuth();
-  }, []);
+  }, [currentPath, navigate]);
 
   useEffect(() => {
     const handleLogout = () => {

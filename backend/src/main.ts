@@ -70,7 +70,7 @@ async function bootstrap() {
     // Logging
     app.use(
       morgan('combined', {
-        skip: (req, res) => NODE_ENV === 'test',
+        skip: () => NODE_ENV === 'test',
       }),
     );
 

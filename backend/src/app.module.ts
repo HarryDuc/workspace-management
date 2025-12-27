@@ -23,10 +23,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     //     maxQueryExecutionTime: 50, // log nếu query > 50ms
     //   }),
     // }),
-    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env', '.env.local', '.env.development'] }),
-
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['.env', '.env.local', '.env.development'],
+    }),
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}
