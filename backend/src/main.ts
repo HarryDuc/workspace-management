@@ -15,6 +15,7 @@ async function bootstrap() {
       logger: new ConsoleLogger({
         prefix: 'Backend',
       }),
+      bodyParser: false,
     });
     const configService = app.get(ConfigService);
     const RATE_LIMIT =
@@ -87,7 +88,6 @@ async function bootstrap() {
       }),
     );
     app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
     // Chỉ nén JSON + HTML, bỏ qua static frontend assets
     app.use(
       compression({

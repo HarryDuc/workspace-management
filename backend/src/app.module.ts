@@ -3,6 +3,13 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { PrismaModule } from './prisma/prisma.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { ProjectModule } from './modules/project/project.module';
+import { TaskModule } from './modules/task/task.module';
+import { WorkspaceModule } from './modules/workspace/workspace.module';
+import { UserModule } from './modules/users/users.module';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -27,6 +34,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       isGlobal: true,
       envFilePath: ['.env', '.env.local', '.env.development'],
     }),
+    MailModule,
+    PrismaModule,
+    UserModule,
+    AuthModule,
+    ProjectModule,
+    TaskModule,
+    WorkspaceModule,
   ],
   controllers: [AppController],
   providers: [AppService],
