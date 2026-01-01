@@ -5,7 +5,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
 import { Button } from "../components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import Link from "next/link";
-import { WorkspaceAvatar } from "../components/workspace/WorkspaceAvatar";
+import { WorkspaceAvatar } from "../modules/workspace/WorkspaceAvatar";
 
 interface HeaderProps {
   onWorkspaceSelected: (workspace: Workspace) => void;

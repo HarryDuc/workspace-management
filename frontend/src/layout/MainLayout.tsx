@@ -1,7 +1,7 @@
 "use client";
 
 import { Sidebar } from "@/src/layout/Sidebar";
-import { CreateWorkspace } from "@/src/components/workspace/CreateWorkspace";
+import { CreateWorkspace } from "@/src/modules/workspace/CreateWorkspace";
 import type { Workspace } from "@/src/types";
 import { useState } from "react";
 import { Navbar } from "@/src/layout/Navbar";
