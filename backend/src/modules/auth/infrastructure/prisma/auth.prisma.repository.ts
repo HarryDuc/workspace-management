@@ -224,11 +224,128 @@ export class AuthPrismaRepository implements IAuthRepository {
   }
 
   async resetPassword(email: string): Promise<void> {
-    return;
+    console.log('Initiating password reset for email:', email);
+    const user = await this.prisma.user.findUnique({
+      where: { email: email },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (!user.isEmailVerified) {
+      throw new Error('Email not verified');
+    }
+
+    const existingVerification = await this.prisma.verification.findFirst({
+      where: {
+        userId: user.id,
+      },
+    });
+
+    if (existingVerification && existingVerification.expiresAt > new Date()) {
+      throw new Error('A reset password request is already pending');
+    }
+
+    if (existingVerification && existingVerification.expiresAt < new Date()) {
+      await this.prisma.verification.deleteMany({
+        where: {
+          userId: user.id,
+        },
+      });
+    }
+
+    const resetToken = jwt.sign(
+      {
+        userId: user.id,
+        userEmail: user.email,
+        purpose: 'reset-password',
+      },
+      this.configService.get('JWT_PASSWORD_RESET_SECRET'),
+      { expiresIn: '1h' },
+    );
+
+    await this.prisma.verification.create({
+      data: {
+        userId: user.id as string,
+        token: resetToken,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+        createdAt: new Date(),
+      },
+    });
+
+    const randomCode = await randomNumber(6);
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+
+    const isEmailSent = await this.mailService.sendEmail(
+      user.email,
+      user.name,
+      randomCode,
+      resetLink,
+    );
+
+    if (!isEmailSent) {
+      throw new Error('Failed to send reset password email');
+    }
+    console.log('Sent reset password email');
   }
 
-  async verifyResetPassword(token: string): Promise<AuthEntity | null> {
-    return null;
+  async verifyResetPassword(token: string, newPassword: string, confirmPassword: string): Promise<void> {
+    const payload = jwt.verify(
+      token,
+      this.configService.get('JWT_PASSWORD_RESET_SECRET'),
+    ) as {
+      userId: string;
+      userEmail: string;
+      purpose: string;
+      iat: number;
+      exp: number;
+    };
+    if (!payload) throw new Error('Unauthorized');
+    if (payload.purpose !== 'reset-password')
+      throw new Error('Invalid token purpose');
+    const verification = await this.prisma.verification.findFirst({
+      where: {
+        userId: payload.userId,
+        token: token,
+      },
+    });
+    if (!verification) {
+      throw new Error('Invalid or expired token');
+    }
+    const isTokenExpired = verification.expiresAt < new Date();
+    if (isTokenExpired) {
+      throw new Error('Invalid or expired token');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (newPassword !== confirmPassword) {
+      throw new Error('Passwords do not match');
+    }
+
+    const hashedPassword = await hashPasswordUtils(newPassword);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword },
+    });
+
+    await this.prisma.verification.deleteMany({
+      where: {
+        userId: payload.userId,
+        token: token,
+      },
+    });
+
+    console.log('Password reset successfully');
+
   }
 
   async refreshToken(refreshToken: string, accessToken: any): Promise<void> {

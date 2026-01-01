@@ -27,22 +27,30 @@ export class AuthService {
     return user;
   }
 
-  verifyEmail(token: string) {
+  async verifyEmail(token: string) {
     if (!token) {
       throw new BadRequestException('Token is required');
     }
     return this.authRepository.verifyEmail(token);
   }
 
-  refreshToken(refreshToken: string, accessToken: any) {
+  async refreshToken(refreshToken: string, accessToken: any) {
     return `This action updates auth`;
   }
 
-  resetPassword(email: string) {
-    return `This action removes a #${email} auth`;
+  async resetPassword(email: string) {
+    return this.authRepository.resetPassword(email);
   }
 
-  verifyResetPassword(token: string) {
-    return `This action removes a #${token} auth`;
+  async verifyResetPassword(
+    token: string,
+    password: string,
+    confirmPassword: string,
+  ) {
+    return this.authRepository.verifyResetPassword(
+      token,
+      password,
+      confirmPassword,
+    );
   }
 }

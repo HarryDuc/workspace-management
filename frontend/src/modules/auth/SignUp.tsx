@@ -23,6 +23,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import z from "zod";
+import { toast } from "sonner";
+import { useSignUpMutation } from "../hooks/useAuth";
+import { useRouter } from "next/navigation";
+import { SignUpPayload } from "@/src/types";
+import Loader from "@/src/components/Loader";
 
 export type SignUpFormData = z.infer<typeof signUpSchema>;
 
@@ -37,8 +42,36 @@ export default function SignUp() {
     },
   });
 
+  const router = useRouter();
+
+  const { mutate, isPending } = useSignUpMutation();
+
   const handleSubmit = (data: SignUpFormData) => {
-    console.log(data);
+    // Build payload explicitly and exclude confirmPassword
+    const payload: SignUpPayload = {
+      name: data.name,
+      email: data.email,
+      password: data.password,
+    };
+
+    console.log("Form submitted:", payload);
+    mutate(payload, {
+      onSuccess: () => {
+        toast.success("Email Verification Required", {
+          description:
+            "Please check your email for a verification link. If you don't see it, please check your spam folder.",
+        });
+
+        form.reset();
+        router.push("/sign-in");
+      },
+      onError: (error: any) => {
+        const errorMessage =
+          error.response?.data?.message || "An error occurred";
+        console.log(error);
+        toast.error(errorMessage);
+      },
+    });
   };
 
   return (
@@ -129,8 +162,8 @@ export default function SignUp() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">
-                Sign up
+              <Button type="submit" className="w-full" disabled={isPending}>
+                {isPending ? <Loader /> : "Sign up"}
               </Button>
             </form>
           </Form>

@@ -12,6 +12,7 @@ import {
 import { AuthService } from '../application/services/auth.service';
 import { AuthEntity } from '../domain/entities/auth.entity';
 import { LoginAuthEntity } from '../application/dto/login.dto';
+import { ResetPasswordDto } from '../application/dto/reset-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -32,13 +33,14 @@ export class AuthController {
     return this.authService.verifyEmail(token);
   }
 
-  @Post('reset-password')
-  resetPassword(@Body() email: string) {
+  @Post('reset-password-request')
+  resetPassword(@Body('email') email: string) {
     return this.authService.resetPassword(email);
   }
 
-  verifyResetPassword(@Body() token: string) {
-    return this.authService.verifyResetPassword(token);
+  @Post('reset-password')
+  verifyResetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.authService.verifyResetPassword(resetPasswordDto.token, resetPasswordDto.newPassword, resetPasswordDto.confirmPassword);
   }
 
   refreshToken(@Body() token: any) {

@@ -1,9 +1,92 @@
-import React from 'react'
+import { Card, CardContent, CardHeader } from "@/src/components/ui/card";
+import { useEffect, useState } from "react";
+import { CheckCircle, Loader, XCircle } from "lucide-react";
+import { Button } from "@/src/components/ui/button";
+import { useVerifyEmailMutation } from "../hooks/useAuth";
+import { toast } from "sonner";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 
-type Props = {}
+export default function VerifyEmail() {
+  const searchParams = useSearchParams();
 
-export default function VerifyEmail({}: Props) {
+  const token = searchParams.get("token");
+  const [isSuccess, setIsSuccess] = useState(false);
+  const { mutate, isPending: isVerifying } = useVerifyEmailMutation();
+
+  useEffect(() => {
+    if (token) {
+      mutate(
+        { token },
+        {
+          onSuccess: () => {
+            setIsSuccess(true);
+          },
+          onError: (error: any) => {
+            const errorMessage =
+              error.response?.data?.message || "An error occurred";
+            setIsSuccess(false);
+            console.log(error);
+
+            toast.error(errorMessage);
+          },
+        }
+      );
+    }
+  }, [searchParams]);
+
   return (
-    <div>VerifyEmail</div>
-  )
+    <div className="flex flex-col items-center justify-center h-screen">
+      <h1 className="text-2xl font-bold">Verify Email</h1>
+      <p className="text-sm text-gray-500">Verifying your email...</p>
+
+      <Card className="w-full max-w-md">
+        {/* <CardHeader>
+          <Link to="/sign-in" className="flex items-center gap-2 text-sm">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Sign in
+          </Link>
+        </CardHeader> */}
+
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-6 ">
+            {isVerifying ? (
+              <>
+                <Loader className="w-10 h-10 text-gray-500 animate-spin" />
+                <h3 className="text-lg font-semibold">Verifying email...</h3>
+                <p className="text-sm text-gray-500">
+                  Please wait while we verify your email.
+                </p>
+              </>
+            ) : isSuccess ? (
+              <>
+                <CheckCircle className="w-10 h-10 text-green-500" />
+                <h3 className="text-lg font-semibold">Email Verified</h3>
+                <p className="text-sm text-gray-500">
+                  Your email has been verified successfully.
+                </p>
+                <Link href="/sign-in" className="text-sm text-blue-500 mt-6">
+                  <Button variant="outline">Back to Sign in</Button>
+                </Link>
+              </>
+            ) : (
+              <>
+                <XCircle className="w-10 h-10 text-red-500" />
+                <h3 className="text-lg font-semibold">
+                  Email Verification Failed
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Your email verification failed. Please try again.
+                </p>
+
+                <Link href="/sign-in" className="text-sm text-blue-500 mt-6">
+                  <Button variant="outline">Back to Sign in</Button>
+                </Link>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }

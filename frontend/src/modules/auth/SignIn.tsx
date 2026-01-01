@@ -23,10 +23,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import z from "zod";
+import { useSignInMutation } from "../hooks/useAuth";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import Loader from "@/src/components/Loader";
 
 type SignInFormData = z.infer<typeof signInSchema>;
 
 export default function SignIn() {
+  const router = useRouter();
   const form = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
     defaultValues: {
@@ -34,8 +39,27 @@ export default function SignIn() {
       password: "",
     },
   });
+
+  const { mutate, isPending } = useSignInMutation();
+
   const handleSubmit = (data: SignInFormData) => {
-    console.log(data);
+    mutate(data, {
+      onSuccess: () => {
+        toast.success("Email Verification Required", {
+          description:
+            "Please check your email for a verification link. If you don't see it, please check your spam folder.",
+        });
+
+        form.reset();
+        router.push("/dashboard");
+      },
+      onError: (error: any) => {
+        const errorMessage =
+          error.response?.data?.message || "An error occurred";
+        console.log(error);
+        toast.error(errorMessage);
+      },
+    });
   };
 
   return (
@@ -96,8 +120,8 @@ export default function SignIn() {
                 )}
               />
 
-              <Button type="submit" className="w-full">
-                Sign in
+              <Button type="submit" className="w-full" disabled={isPending}>
+                {isPending ? <Loader /> : "Sign in"}
               </Button>
             </form>
           </Form>

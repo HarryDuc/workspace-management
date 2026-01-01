@@ -7,5 +7,5 @@ export interface IAuthRepository {
   verifyEmail(token: string): Promise<AuthEntity | null>;
   refreshToken(refreshToken: string, accessToken: string): Promise<void>;
   resetPassword(email: string): Promise<void>;
-  verifyResetPassword(token: string): Promise<AuthEntity | null>;
+  verifyResetPassword(token: string, password: string, comfirmPassword: string): Promise<void>;
 }

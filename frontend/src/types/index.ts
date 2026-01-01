@@ -186,3 +186,16 @@ export interface WorkspaceProductivityData {
   completed: number;
   total: number;
 }
+
+export interface SignUpFormData {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+export interface SignUpPayload {
+  name: string;
+  email: string;
+  password: string;
+}
