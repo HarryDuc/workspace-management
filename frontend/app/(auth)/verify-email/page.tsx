@@ -1,5 +1,7 @@
+import VerifyEmail from "@/src/modules/auth/VerifyEmail";
+
 export default function VerifyEmailApp() {
   return (
-    <div>VerifyEmailApp</div>
+    <VerifyEmail />
   )
 }

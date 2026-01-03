@@ -1,3 +1,5 @@
+"use client"
+
 import { Card, CardContent, CardHeader } from "@/src/components/ui/card";
 import { useEffect, useState } from "react";
 import { CheckCircle, Loader, XCircle } from "lucide-react";
@@ -11,6 +13,7 @@ export default function VerifyEmail() {
   const searchParams = useSearchParams();
 
   const token = searchParams.get("token");
+  console.log("token", token)
   const [isSuccess, setIsSuccess] = useState(false);
   const { mutate, isPending: isVerifying } = useVerifyEmailMutation();
 

@@ -1,10 +1,12 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
 
 @Injectable()
 export class MailService {
+  private readonly logger = new Logger(MailService.name);
+
   constructor(
-    private readonly mailerService: MailerService
+    private readonly mailerService: MailerService,
   ) { }
 
   async sendEmail(email: string, name: string, code: string, linkToken?: string): Promise<string> {
@@ -20,7 +22,7 @@ export class MailService {
         },
       })
       .then(() => {
-        console.log('Email sent successfully');
+        this.logger.log("Send email successfully");
       })
       .catch((err) => {
         throw new UnauthorizedException('Failed to send email: ' + err.message);

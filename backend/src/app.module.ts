@@ -10,7 +10,6 @@ import { TaskModule } from './modules/task/task.module';
 import { WorkspaceModule } from './modules/workspace/workspace.module';
 import { UserModule } from './modules/users/users.module';
 import { MailModule } from './mail/mail.module';
-
 @Module({
   imports: [
     // TypeOrmModule.forRootAsync({

@@ -1,31 +1,36 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
-import { IUserRepository } from "../../domain/repositories/user.repository.interface";
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { IUserRepository } from '../../domain/repositories/user.repository.interface';
 
 @Injectable()
 export class UserService {
   constructor(
-    @Inject("UserRepository")
+    @Inject('UserRepository')
     private readonly userRepository: IUserRepository,
   ) {}
 
-  async getUserByEmail(email: string) {
-    const user = await this.userRepository.findByEmail(email);
-    if (!user) throw new NotFoundException("User not found");
+  async getUserById(id: string) {
+    const user = await this.userRepository.findById(id);
+    if (!user) throw new NotFoundException('User not found');
     return user;
   }
 
-  async updateUser(email: string): Promise<void> {
-    const user = await this.userRepository.findByEmail(email);
-    if (!user) throw new NotFoundException("User not found");
+  async updateUser(id: string): Promise<void> {
+    const user = await this.userRepository.findById(id);
+    if (!user) throw new NotFoundException('User not found');
 
     await this.userRepository.save(user);
   }
 
-  async updatePassword(email: string) {
-    const user = await this.userRepository.findByEmail(email);
+  async updatePassword(
+    id: string,
+    body: {
+      currentPassword: string;
+      newPassword: string;
+      comfirmNewPassword: string;
+    },
+  ): Promise<void> {
+    const user = await this.userRepository.findById(id);
     if (!user) return;
-
-    
 
     await this.userRepository.save(user);
   }

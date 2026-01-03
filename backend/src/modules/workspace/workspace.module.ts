@@ -1,9 +1,21 @@
 import { Module } from '@nestjs/common';
-import { WorkspaceService } from './workspace.service';
-import { WorkspaceController } from './workspace.controller';
+import { MailService } from '@/src/mail/mail.service';
+import { JwtService } from '@nestjs/jwt';
+import { WorkspaceController } from './presentation/workspace.controller';
+import { WorkspacePrismaRepository } from './infrastructure/prisma/workspace.prisma.repository';
+import { WorkspaceService } from './application/services/workspace.service';
 
 @Module({
   controllers: [WorkspaceController],
-  providers: [WorkspaceService],
+  providers: [
+    WorkspaceService,
+    MailService,
+    JwtService,
+    {
+      provide: 'WorkspaceRepository',
+      useClass: WorkspacePrismaRepository,
+    },
+  ],
 })
+
 export class WorkspaceModule {}

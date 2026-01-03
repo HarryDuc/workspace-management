@@ -1,6 +1,15 @@
-import { Body, Controller, Get, Param, Put, Version } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Put,
+  Request,
+  UseGuards,
+  Version,
+} from '@nestjs/common';
 import { UserService } from '../application/services/user.service';
-
+import { JwtAuthGuard, RequestWithUser } from '@/src/common/guards/jwt.guard';
 
 @Controller('users')
 @Controller({
@@ -9,19 +18,41 @@ import { UserService } from '../application/services/user.service';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Version('1')
-  @Get(':email')
-  async getUser(@Param('email') email: string) {
-    return this.userService.getUserByEmail(email);
+  @UseGuards(JwtAuthGuard)
+  @Get('/profile')
+  async getUser(@Request() req: RequestWithUser) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new Error('User ID not found in request');
+    }
+    return this.userService.getUserById(userId);
   }
 
-  @Put(':email')
-  async updateUser(@Body('email') email: string) {
-    return this.userService.updateUser(email);
+  @UseGuards(JwtAuthGuard)
+  @Put('/profile')
+  async updateUser(@Request() req: RequestWithUser) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new Error('User ID not found in request');
+    }
+    return this.userService.updateUser(userId);
   }
 
-  @Put(':email')
-  async changePassword(@Body() email: string) {
-    return this.userService.updatePassword(email);
+  @UseGuards(JwtAuthGuard)
+  @Put('/profile/change-password')
+  async changePassword(
+    @Request() req: RequestWithUser,
+    @Body()
+    body: {
+      currentPassword: string;
+      newPassword: string;
+      comfirmNewPassword: string;
+    },
+  ) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new Error('User ID not found in request');
+    }
+    return this.userService.updatePassword(userId, body);
   }
 }

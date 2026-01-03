@@ -16,6 +16,7 @@ async function bootstrap() {
         prefix: 'Backend',
       }),
       bodyParser: false,
+      bufferLogs: true,
     });
     const configService = app.get(ConfigService);
     const RATE_LIMIT =

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { IUserRepository } from '../../domain/repositories/user.repository.interface';
 import { UserEntity } from '../../domain/entities/user.entity';
 import { UserMapper } from '../mappers/user.mapper';
@@ -6,6 +6,8 @@ import { PrismaService } from '@/src/prisma/prisma.service';
 
 @Injectable()
 export class UserPrismaRepository implements IUserRepository {
+    private readonly logger = new Logger(UserPrismaRepository.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async findById(id: string): Promise<UserEntity | null> {
@@ -41,19 +43,36 @@ export class UserPrismaRepository implements IUserRepository {
   }
 
   async updatePassword(
-    email: string,
+    id: string,
+    currentPassword: string,
     newPassword: string,
-  ): Promise<UserEntity | null> {
-    const user = await this.prisma.user.update({
-      where: { email },
+    confirmPassword: string,
+  ): Promise<void | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+    });
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    if (user.password !== currentPassword) {
+      throw new Error('Current password is incorrect');
+    }
+
+    if (newPassword !== confirmPassword) {
+      throw new Error('New password and confirm password do not match');
+    }
+
+    const userUpdate = await this.prisma.user.update({
+      where: { id: id },
       data: {
         password: newPassword,
       },
     });
-    if (!user) {
+    if (!userUpdate) {
       throw new Error('User update password failed');
     }
-    return user ? UserMapper.toEntity(user) : null;
+    this.logger.log('Password updated successfully');
   }
 
   async save(user: UserEntity): Promise<void> {

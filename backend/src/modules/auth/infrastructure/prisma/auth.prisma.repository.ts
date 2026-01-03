@@ -1,9 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { IAuthRepository } from '../../domain/repositories/auth.repository.interface';
 import { AuthEntity } from '../../domain/entities/auth.entity';
 import { AuthMapper } from '../mappers/auth.mapper';
 import { PrismaService } from '@/src/prisma/prisma.service';
-import jwt from 'jsonwebtoken';
+import { JwtService } from '@nestjs/jwt';
 import { comparePasswordUtils, hashPasswordUtils } from '@/src/utils/hash';
 import { ConfigService } from '@nestjs/config';
 import { MailService } from '@/src/mail/mail.service';
@@ -11,10 +11,13 @@ import { randomNumber } from '@/src/utils/random';
 
 @Injectable()
 export class AuthPrismaRepository implements IAuthRepository {
+  private readonly logger = new Logger(AuthPrismaRepository.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly mailService: MailService,
+    private readonly jwtService: JwtService,
   ) {}
 
   async findByEmail(email: string): Promise<AuthEntity | null> {
@@ -33,14 +36,16 @@ export class AuthPrismaRepository implements IAuthRepository {
         data: AuthMapper.toPersistence(user),
       });
 
-      const verificationToken = jwt.sign(
+      const verificationToken = this.jwtService.sign(
         {
           userId: createdUser.id,
           userEmail: user.email,
           purpose: 'email-verification',
         },
-        this.configService.get('JWT_EMAIL_VERIFICATION_SECRET'),
-        { expiresIn: '1h' },
+        {
+          secret: this.configService.get('JWT_EMAIL_VERIFICATION_SECRET'),
+          expiresIn: '1h',
+        },
       );
 
       await this.prisma.verification.create({
@@ -67,7 +72,7 @@ export class AuthPrismaRepository implements IAuthRepository {
         throw new Error('Failed to send verification email');
       }
 
-      console.log('Sent verification email');
+      this.logger.log('Sent verification email');
     } catch (error) {
       throw new Error('Registration failed: ' + error.message);
     }
@@ -102,14 +107,16 @@ export class AuthPrismaRepository implements IAuthRepository {
             },
           });
 
-          const verificationToken = jwt.sign(
+          const verificationToken = this.jwtService.sign(
             {
               userId: user.id,
               userEmail: user.email,
               purpose: 'email-verification',
             },
-            this.configService.get('JWT_EMAIL_VERIFICATION_SECRET'),
-            { expiresIn: '1h' },
+            {
+              secret: this.configService.get('JWT_EMAIL_VERIFICATION_SECRET'),
+              expiresIn: '1h',
+            },
           );
 
           await this.prisma.verification.create({
@@ -136,7 +143,7 @@ export class AuthPrismaRepository implements IAuthRepository {
             throw new Error('Failed to send verification email');
           }
 
-          console.log('Resent verification email');
+          this.logger.log('Resent verification email');
         }
       }
 
@@ -152,14 +159,16 @@ export class AuthPrismaRepository implements IAuthRepository {
       });
 
       if (user && comparedPassword) {
-        const token = jwt.sign(
+        const token = this.jwtService.sign(
           {
-            id: user.id,
+            userId: user.id,
             email: user.email,
             purpose: 'access-token',
           },
-          this.configService.get('JWT_SECRET'),
-          { expiresIn: this.configService.get('JWT_EXPIRES_IN') },
+          {
+            secret: this.configService.get('JWT_SECRET'),
+            expiresIn: this.configService.get('JWT_EXPIRES_IN'),
+          },
         );
         return { token, user: AuthMapper.toEntity(user) };
       }
@@ -171,11 +180,10 @@ export class AuthPrismaRepository implements IAuthRepository {
   }
 
   async verifyEmail(token: string): Promise<AuthEntity | null> {
-    console.log('Verifying email with token:', token);
-    const payload = jwt.verify(
-      token,
-      this.configService.get('JWT_EMAIL_VERIFICATION_SECRET'),
-    ) as {
+    this.logger.log('Verifying email with token:', token);
+    const payload = this.jwtService.verify(token, {
+      secret: this.configService.get('JWT_EMAIL_VERIFICATION_SECRET'),
+    }) as {
       userId: string;
       userEmail: string;
       purpose: string;
@@ -219,12 +227,12 @@ export class AuthPrismaRepository implements IAuthRepository {
     const user = await this.prisma.user.findUnique({
       where: { id: payload.userId },
     });
-    console.log('Email verified successfully');
+    this.logger.log('Email verified successfully');
     return user ? AuthMapper.toEntity(user) : null;
   }
 
   async resetPassword(email: string): Promise<void> {
-    console.log('Initiating password reset for email:', email);
+    this.logger.log('Initiating password reset for email:', email);
     const user = await this.prisma.user.findUnique({
       where: { email: email },
     });
@@ -255,14 +263,16 @@ export class AuthPrismaRepository implements IAuthRepository {
       });
     }
 
-    const resetToken = jwt.sign(
+    const resetToken = this.jwtService.sign(
       {
         userId: user.id,
         userEmail: user.email,
         purpose: 'reset-password',
       },
-      this.configService.get('JWT_PASSWORD_RESET_SECRET'),
-      { expiresIn: '1h' },
+      {
+        secret: this.configService.get('JWT_PASSWORD_RESET_SECRET'),
+        expiresIn: '1h',
+      },
     );
 
     await this.prisma.verification.create({
@@ -287,14 +297,17 @@ export class AuthPrismaRepository implements IAuthRepository {
     if (!isEmailSent) {
       throw new Error('Failed to send reset password email');
     }
-    console.log('Sent reset password email');
+    this.logger.log('Sent reset password email');
   }
 
-  async verifyResetPassword(token: string, newPassword: string, confirmPassword: string): Promise<void> {
-    const payload = jwt.verify(
-      token,
-      this.configService.get('JWT_PASSWORD_RESET_SECRET'),
-    ) as {
+  async verifyResetPassword(
+    token: string,
+    newPassword: string,
+    confirmPassword: string,
+  ): Promise<void> {
+    const payload = this.jwtService.verify(token, {
+      secret: this.configService.get('JWT_PASSWORD_RESET_SECRET'),
+    }) as {
       userId: string;
       userEmail: string;
       purpose: string;
@@ -344,8 +357,7 @@ export class AuthPrismaRepository implements IAuthRepository {
       },
     });
 
-    console.log('Password reset successfully');
-
+    this.logger.log('Password reset successfully');
   }
 
   async refreshToken(refreshToken: string, accessToken: any): Promise<void> {
